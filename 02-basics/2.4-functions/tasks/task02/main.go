@@ -25,9 +25,23 @@ import "fmt"
 // TODO: напиши функцию makeCounter(start int) func() int
 // Подсказка: текущее значение храни в переменной внутри makeCounter,
 // и обращайся к ней из возвращаемой функции (это и есть замыкание)
+func makeCounter(start int) func() int {
+	counter := start
+	return func() int {
+		counter++
+		return counter
+	}
+}
 
 func main() {
 	// TODO: создай два независимых счётчика и проверь их работу
+	firstCounter := makeCounter(0)
+	secondCounter := makeCounter(10)
 
-	fmt.Println("Допиши код!")
+	for range 5 {
+		fmt.Println("First:", firstCounter())
+		fmt.Println("First:", firstCounter())
+
+		fmt.Println("Second:", secondCounter())
+	}
 }

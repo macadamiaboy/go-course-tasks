@@ -45,11 +45,20 @@ func main() {
 
 	// TODO: создай errgroup
 	// g := new(errgroup.Group)
+	g := new(errgroup.Group)
 
 	// TODO: для каждого сервиса запусти g.Go(func() error { ... })
 	// Внутри вызови callService(service) и верни результат
+	for _, service := range services {
+		g.Go(func() error {
+			return callService(service)
+		})
+	}
 
 	// TODO: вызови g.Wait() и обработай ошибку
+	if err := g.Wait(); err != nil {
+		fmt.Println("Error occurred:", err)
+	}
 
 	_ = errgroup.Group{}
 	_ = services

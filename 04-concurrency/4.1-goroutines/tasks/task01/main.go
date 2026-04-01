@@ -37,7 +37,7 @@ func main() {
 		//   - подожди это время через time.Sleep
 		//   - выведи результат
 		go func(n int) {
-			defer wg.Done()
+			defer wg.Done() //some changes
 			randTime := rand.Intn(150) + 50
 			time.Sleep(time.Duration(randTime))
 			fmt.Printf("Задача %d выполнена за %vms\n", n, randTime)

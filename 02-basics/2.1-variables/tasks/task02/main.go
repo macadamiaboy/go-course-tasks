@@ -34,7 +34,7 @@ const (
 
 func statusName(status int) string {
 	statuses := [...]string{"StatusNew", "StatusInWork", "StatusDone", "StatusCancelled"}
-	if status <= len(statuses) {
+	if status >= 0 && status < len(statuses) {
 		return statuses[status]
 	}
 	//return "StatusUnknown"
@@ -42,7 +42,7 @@ func statusName(status int) string {
 }
 
 func main() {
-	statuses := []int{0, 1, 2, 3, 99}
+	statuses := []int{0, 1, 2, 3, 4, -1}
 	for _, s := range statuses {
 		fmt.Printf("Статус %d: %s\n", s, statusName(s))
 	}

@@ -20,7 +20,7 @@ func main() {
 	var name string = "Аня"
 
 	// TODO: объяви переменную age типа int со значением 22 (используй короткое объявление :=)
-	var age int = 22
+	age := 22
 
 	// TODO: объяви переменную balance типа float64 со значением 1500.50
 	var balance float64 = 1500.50

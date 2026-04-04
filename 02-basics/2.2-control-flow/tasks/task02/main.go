@@ -44,9 +44,8 @@ func countVowels(s string) int {
 
 // at the first made it without the switch expression but reread the task at the skillspace and decided to create another solution
 func countVowelsWSwitch(s string) int {
-	str := strings.ToLower(s)
 	counter := 0
-	for _, letter := range str {
+	for _, letter := range s {
 		switch letter {
 		case 'а', 'е', 'ё', 'и', 'й', 'о', 'у', 'ы', 'э', 'ю', 'я', 'a', 'e', 'i', 'o', 'u':
 			counter++

@@ -10,7 +10,7 @@ import (
 // stolen from 3.4 task01
 func safeDivide(a, b int) (int, error) {
 	if b == 0 {
-		return 0, errors.New("dividion by zero")
+		return 0, errors.New("division by zero")
 	}
 	return a / b, nil
 }
@@ -62,7 +62,7 @@ func buyItem(count int) error {
 	if count == 0 {
 		return ErrOutOfStock
 	} else if count < 0 {
-		return errors.New("Negative argument")
+		return errors.New("negative argument")
 	}
 	return nil
 }
@@ -93,7 +93,7 @@ func readFileMock() error { return errors.New("base error") }
 
 func loadData() error {
 	err := readFileMock()
-	return fmt.Errorf("Wrapped error: %w", err)
+	return fmt.Errorf("wrapped error: %w", err)
 }
 
 func fourthTask() {
@@ -121,8 +121,11 @@ func fifthTask() {
 	fmt.Println("\nTask 3.4.5:")
 
 	var err InputError
-	errors.As(validateEmail(""), &err)
-	fmt.Printf("%T: %s\n", err, err)
+	if errors.As(validateEmail(""), &err) {
+		fmt.Printf("%T: %s\n", err, err)
+		return
+	}
+	fmt.Printf("No errors")
 }
 
 // 3.4.6
@@ -159,25 +162,25 @@ func sixthTask() {
 // 3.4.7
 func validateName(name string) error {
 	if name == "" {
-		return errors.New("Name should not be empty")
+		return errors.New("name should not be empty")
 	}
 	return nil
 }
 
 func validateAge(age int) error {
 	if age <= 0 {
-		return errors.New("Age cannot be negative or zero")
+		return errors.New("age cannot be negative or zero")
 	}
 	return nil
 }
 
 func register(name string, age int) error {
 	if err := validateName(name); err != nil {
-		return fmt.Errorf("Failed to validate the name, %w", err)
+		return fmt.Errorf("failed to validate the name, %w", err)
 	}
 
 	if err := validateAge(age); err != nil {
-		return fmt.Errorf("Failed to validate the age, %w", err)
+		return fmt.Errorf("failed to validate the age, %w", err)
 	}
 
 	return nil

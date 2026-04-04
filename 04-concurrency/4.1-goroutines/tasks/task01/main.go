@@ -39,7 +39,7 @@ func main() {
 		go func(n int) {
 			defer wg.Done() //some changes
 			randTime := rand.Intn(150) + 50
-			time.Sleep(time.Duration(randTime))
+			time.Sleep(time.Duration(randTime) * time.Millisecond)
 			fmt.Printf("Задача %d выполнена за %vms\n", n, randTime)
 		}(i)
 	}

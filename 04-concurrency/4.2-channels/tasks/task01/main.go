@@ -29,10 +29,8 @@ import (
 	"sync"
 )
 
-var wg sync.WaitGroup
-
 // TODO: напиши функцию worker(id int, jobs <-chan int, results chan<- string, wg *sync.WaitGroup)
-func worker(id int, jobs <-chan int, results chan<- int) {
+func worker(id int, jobs <-chan int, results chan<- int, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for job := range jobs {
 		results <- job * job
@@ -40,6 +38,8 @@ func worker(id int, jobs <-chan int, results chan<- int) {
 }
 
 func main() {
+	var wg sync.WaitGroup
+
 	// TODO: создай каналы jobs и results
 	jobs := make(chan int, 12)
 	results := make(chan int, 12)
@@ -47,7 +47,7 @@ func main() {
 	// TODO: запусти 3 воркера через цикл
 	for w := 0; w < 3; w++ {
 		wg.Add(1)
-		go worker(w, jobs, results)
+		go worker(w, jobs, results, &wg)
 	}
 
 	// TODO: закинь задачи 1..12 в jobs и закрой канал

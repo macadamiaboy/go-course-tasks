@@ -59,8 +59,4 @@ func main() {
 	if err := g.Wait(); err != nil {
 		fmt.Println("Error occurred:", err)
 	}
-
-	_ = errgroup.Group{}
-	_ = services
-	_ = fmt.Println
 }

@@ -27,7 +27,8 @@ import (
 	// TODO: импортируй пакет из module-b
 	// "github.com/yourname/module-b"
 	"fmt"
-	"github.com/yourname/module-b"
+
+	moduleb "github.com/macadamiaboy/module-b"
 )
 
 func main() {

@@ -13,5 +13,5 @@ package moduleb
 // Функции с маленькой буквы - только для использования внутри этого пакета.
 
 func SayHello() string {
-	return "the task is done"
+	return "Greetings from the fixed module b"
 }

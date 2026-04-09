@@ -35,7 +35,17 @@ func (s *greetService) Greet(ctx context.Context, req *GreetRequest) (*GreetResp
 func LoggingInterceptor() UnaryInterceptor {
 	return func(ctx context.Context, method string, req any, handler UnaryHandler) (any, error) {
 		// TODO: add timing and logging around the handler call
-		return handler(ctx, req)
+		start := time.Now()
+
+		res, err := handler(ctx, req)
+
+		fmt.Printf("method: %s, ", method)
+		fmt.Printf("duration: %v, ", time.Since(start).Milliseconds())
+		if err != nil {
+			fmt.Printf("error: %s\n", err)
+		}
+
+		return res, err
 	}
 }
 

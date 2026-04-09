@@ -37,12 +37,19 @@ func NewInMemoryAccountRepository() *InMemoryAccountRepository {
 
 func (r *InMemoryAccountRepository) Create(ctx context.Context, account Account) (Account, error) {
 	// TODO: assign r.nextID to account.ID, store in map, increment counter, return account
-	return Account{}, nil
+	acc := Account{ID: r.nextID, Owner: account.Owner, Balance: account.Balance}
+	r.accounts[acc.ID] = acc
+	r.nextID++
+	return acc, nil
 }
 
 func (r *InMemoryAccountRepository) GetByID(ctx context.Context, id int64) (Account, error) {
 	// TODO: look up id in r.accounts; return ErrAccountNotFound if missing
-	return Account{}, nil
+	acc, ok := r.accounts[id]
+	if !ok {
+		return Account{}, ErrAccountNotFound
+	}
+	return acc, nil
 }
 
 func main() {

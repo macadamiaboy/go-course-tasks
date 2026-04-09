@@ -45,6 +45,16 @@ func Chain(h http.Handler, middlewares ...Middleware) http.Handler {
 // TODO: переопредели метод WriteHeader у statusRecorder
 // func (r *statusRecorder) WriteHeader(status int) { ... }
 
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (r *statusRecorder) WriteHeader(status int) {
+	r.status = status
+	r.ResponseWriter.WriteHeader(status)
+}
+
 // TODO: реализуй LoggingMiddleware
 // func LoggingMiddleware(logger *slog.Logger) Middleware {
 //     return func(next http.Handler) http.Handler {
@@ -56,6 +66,24 @@ func Chain(h http.Handler, middlewares ...Middleware) http.Handler {
 //         })
 //     }
 // }
+
+func LoggingMiddleware(logger *slog.Logger) Middleware {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now()
+			sRecorder := statusRecorder{ResponseWriter: w, status: http.StatusOK}
+
+			next.ServeHTTP(&sRecorder, r)
+
+			logger.Info("http request",
+				"method", r.Method,
+				"path", r.URL.Path,
+				"status", sRecorder.status,
+				"duration_ms", time.Since(start).Milliseconds(),
+			)
+		})
+	}
+}
 
 func healthHandler(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
@@ -71,9 +99,8 @@ func main() {
 	// health := Chain(http.HandlerFunc(healthHandler), LoggingMiddleware(logger))
 	// mux.Handle("GET /health", health)
 
-	_ = logger // убери после реализации
-	_ = time.Now
-	_ = mux
+	health := Chain(http.HandlerFunc(healthHandler), LoggingMiddleware(logger))
+	mux.Handle("GET /health", health)
 
 	fmt.Println("server started on :8080")
 	if err := http.ListenAndServe(":8080", mux); err != nil {

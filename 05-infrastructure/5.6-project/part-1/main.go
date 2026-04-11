@@ -32,7 +32,7 @@ var secretSalt = []byte("super_secret_salt")
 func genToken(id string) (string, error) {
 	claims := &jwt.RegisteredClaims{
 		ExpiresAt: jwt.NewNumericDate(time.Now().Add(12 * time.Hour)),
-		Issuer:    "MerchShop",
+		Issuer:    "task5.6",
 		Subject:   id,
 		IssuedAt:  jwt.NewNumericDate(time.Now()),
 	}

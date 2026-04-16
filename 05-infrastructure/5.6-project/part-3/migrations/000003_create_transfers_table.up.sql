@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS transfers (
     id BIGSERIAL PRIMARY KEY,
     source BIGINT NOT NULL REFERENCES users(id),
 	target BIGINT NOT NULL REFERENCES users(id),
-	amount INTEGER,
+	amount INTEGER NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

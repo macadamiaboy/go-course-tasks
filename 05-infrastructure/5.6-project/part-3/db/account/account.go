@@ -6,7 +6,6 @@ import (
 
 	"5.6/part-3/db"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var ErrAccNotFound = errors.New("account not found")
@@ -21,8 +20,8 @@ type AccountRepository struct {
 	db db.DBTX
 }
 
-func NewAccRepository(pool *pgxpool.Pool) *AccountRepository {
-	return &AccountRepository{db: pool}
+func NewAccRepository(db db.DBTX) *AccountRepository {
+	return &AccountRepository{db: db}
 }
 
 func (ar *AccountRepository) WithTx(tx pgx.Tx) *AccountRepository {
@@ -60,6 +59,7 @@ func (ar *AccountRepository) GetBalanceByUserID(ctx context.Context, userID int6
 	return balance, nil
 }
 
+/*
 func (ar *AccountRepository) setBalanceByUserID(ctx context.Context, userID int64, balance int) (Account, error) {
 	query := `UPDATE accounts SET coins = $2 WHERE user_id = $1 RETURNING id, user_id, coins;`
 	var res Account
@@ -101,3 +101,35 @@ func (ar *AccountRepository) WriteOff(ctx context.Context, userId int64, sum int
 		return a - b
 	})
 }
+*/
+
+/*
+// yet not implemented
+func (ar *AccountRepository) CreditTo(ctx context.Context, userID int64, sum int) (Account, error) {
+	query := `UPDATE accounts SET coins = $2 WHERE user_id = $1 RETURNING id, user_id, coins;`
+	var res Account
+
+	err := ar.db.QueryRow(ctx, query, userID, balance).Scan(&res.ID, &res.UserID, &res.Coins)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return Account{}, ErrAccNotFound
+		}
+		return Account{}, err
+	}
+	return res, nil
+}
+
+func (ar *AccountRepository) WriteOff(ctx context.Context, userID int64, sum int) (Account, error) {
+	query := `UPDATE accounts SET coins = $2 WHERE user_id = $1 RETURNING id, user_id, coins;`
+	var res Account
+
+	err := ar.db.QueryRow(ctx, query, userID, balance).Scan(&res.ID, &res.UserID, &res.Coins)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return Account{}, ErrAccNotFound
+		}
+		return Account{}, err
+	}
+	return res, nil
+}
+*/

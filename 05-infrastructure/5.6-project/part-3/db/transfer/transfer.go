@@ -5,7 +5,6 @@ import (
 
 	"5.6/part-3/db"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Transfer struct {
@@ -19,8 +18,8 @@ type TransferRepository struct {
 	db db.DBTX
 }
 
-func NewTransferRepository(pool *pgxpool.Pool) *TransferRepository {
-	return &TransferRepository{db: pool}
+func NewTransferRepository(db db.DBTX) *TransferRepository {
+	return &TransferRepository{db: db}
 }
 
 func (tyr *TransferRepository) WithTx(tx pgx.Tx) *TransferRepository {

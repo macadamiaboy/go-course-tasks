@@ -3,10 +3,10 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 
-	"5.6/part-3/account"
-	"5.6/part-3/transfer"
+	"5.6/part-3/db/account"
+	"5.6/part-3/db/transfer"
+	"5.6/part-3/db/user"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -18,6 +18,37 @@ type TransferService struct {
 	transfers transfer.TransferRepository
 }
 
+func NewTransferService(pool *pgxpool.Pool, accs account.AccountRepository, transfers transfer.TransferRepository) *TransferService {
+	return &TransferService{pool: pool, accounts: accs, transfers: transfers}
+}
+
+func (ts *TransferService) Transfer(ctx context.Context, sourceID, targetID int64, sum int) error {
+	userRepo := user.NewUserRepository(ts.pool)
+	transferRepo := transfer.NewTransferRepository(ts.pool)
+
+	// called these two methods to check that there are such rows
+	// idk if they're necessary
+	_, err := userRepo.GetByID(ctx, sourceID)
+	if err != nil {
+		return err
+	}
+
+	_, err = userRepo.GetByID(ctx, targetID)
+	if err != nil {
+		return err
+	}
+
+	transfer := transfer.Transfer{SourceID: sourceID, TargetID: targetID, Amount: sum}
+	_, err = transferRepo.Create(ctx, transfer)
+	if err != nil {
+		return errors.New("failed to create the transfer record")
+	}
+
+	return nil
+}
+
+// unnecessary due to trigger
+/*
 func (ts *TransferService) Transfer(ctx context.Context, sourceID, targetID int64, sum int) error {
 	tx, err := ts.pool.Begin(ctx)
 	if err != nil {
@@ -54,3 +85,4 @@ func (ts *TransferService) Transfer(ctx context.Context, sourceID, targetID int6
 
 	return tx.Commit(ctx)
 }
+*/

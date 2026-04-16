@@ -6,6 +6,9 @@ import (
 	"log"
 	"time"
 
+	"5.6/part-3/db"
+	"5.6/part-3/db/account"
+	"5.6/part-3/db/transfer"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -34,12 +37,50 @@ func main() {
 	}
 	defer pool.Close()
 
-	// call methods
-	// one of methods use from sqlc (db package)
-
 	if err := pool.Ping(ctx); err != nil {
 		log.Fatalf("ping db: %v", err)
 	}
 
 	log.Println("db is reachable")
+
+	// call methods
+	// one of methods use from sqlc (db package)
+	query := db.New(pool)
+	fUserToCreate := db.CreateUserParams{Email: "1@yandex.com", PasswordHash: "zdfnjviuefnf"}
+	firstCreatedUser, err := query.CreateUser(context.Background(), fUserToCreate)
+	if err != nil {
+		log.Fatalf("failed to create the user: %v", err)
+	}
+
+	sUserToCreate := db.CreateUserParams{Email: "2@yandex.com", PasswordHash: "zdfnjviuefnl"}
+	secondCreatedUser, err := query.CreateUser(context.Background(), sUserToCreate)
+	if err != nil {
+		log.Fatalf("failed to create the user: %v", err)
+	}
+
+	accs := account.NewAccRepository(pool)
+	fAccToCreate := account.Account{UserID: firstCreatedUser.ID, Coins: 700}
+	_, err = accs.Create(context.Background(), fAccToCreate)
+	if err != nil {
+		log.Fatalf("failed to create the acc: %v", err)
+	}
+
+	sAccToCreate := account.Account{UserID: secondCreatedUser.ID, Coins: 900}
+	_, err = accs.Create(context.Background(), sAccToCreate)
+	if err != nil {
+		log.Fatalf("failed to create the acc: %v", err)
+	}
+
+	transfers := transfer.NewTransferRepository(pool)
+	fTransferToCreate := transfer.Transfer{SourceID: secondCreatedUser.ID, TargetID: firstCreatedUser.ID, Amount: 700}
+	_, err = transfers.Create(context.Background(), fTransferToCreate)
+	if err != nil {
+		log.Fatalf("failed to create the transfer: %v", err)
+	}
+
+	sTransferToCreate := transfer.Transfer{SourceID: firstCreatedUser.ID, TargetID: secondCreatedUser.ID, Amount: 1500}
+	_, err = transfers.Create(context.Background(), sTransferToCreate)
+	if err != nil {
+		log.Printf("failed to create the transfer: %v", err)
+	}
 }

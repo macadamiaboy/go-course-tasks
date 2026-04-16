@@ -6,7 +6,6 @@ import (
 
 	"5.6/part-3/db"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var ErrUserNotFound = errors.New("user not found")
@@ -20,8 +19,8 @@ type UserRepository struct {
 	db db.DBTX
 }
 
-func NewUserRepository(pool *pgxpool.Pool) *UserRepository {
-	return &UserRepository{db: pool}
+func NewUserRepository(db db.DBTX) *UserRepository {
+	return &UserRepository{db: db}
 }
 
 func (ur *UserRepository) WithTx(tx pgx.Tx) *UserRepository {

@@ -1,0 +1,1 @@
+ALTER TABLE accounts DROP CONSTRAINT check_coins_non_negative;

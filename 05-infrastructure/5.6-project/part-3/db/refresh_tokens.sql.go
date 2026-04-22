@@ -43,14 +43,28 @@ func (q *Queries) CreateRefreshToken(ctx context.Context, arg CreateRefreshToken
 }
 
 const findActiveRefreshToken = `-- name: FindActiveRefreshToken :one
-SELECT (id, user_id, token_hash, is_revoked, expires_at) FROM refresh_tokens WHERE is_revoked = false AND user_id = $1 LIMIT 1
+SELECT id, user_id, token_hash, is_revoked, expires_at FROM refresh_tokens WHERE is_revoked = false AND user_id = $1 LIMIT 1
 `
 
-func (q *Queries) FindActiveRefreshToken(ctx context.Context, userID int64) (interface{}, error) {
+type FindActiveRefreshTokenRow struct {
+	ID        int64              `json:"id"`
+	UserID    int64              `json:"user_id"`
+	TokenHash string             `json:"token_hash"`
+	IsRevoked bool               `json:"is_revoked"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+}
+
+func (q *Queries) FindActiveRefreshToken(ctx context.Context, userID int64) (FindActiveRefreshTokenRow, error) {
 	row := q.db.QueryRow(ctx, findActiveRefreshToken, userID)
-	var column_1 interface{}
-	err := row.Scan(&column_1)
-	return column_1, err
+	var i FindActiveRefreshTokenRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.TokenHash,
+		&i.IsRevoked,
+		&i.ExpiresAt,
+	)
+	return i, err
 }
 
 const revokeRefreshToken = `-- name: RevokeRefreshToken :exec

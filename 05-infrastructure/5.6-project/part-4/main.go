@@ -117,7 +117,7 @@ func initTracer() (*sdktrace.TracerProvider, error) {
 		sdktrace.WithBatcher(exporter),
 		sdktrace.WithResource(resource.NewWithAttributes(
 			semconv.SchemaURL,
-			semconv.ServiceNameKey.String("my-service"),
+			semconv.ServiceNameKey.String("5.6-otel-service"),
 		)),
 	)
 	otel.SetTracerProvider(tp)

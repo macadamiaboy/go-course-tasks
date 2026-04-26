@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package api_token_v1;
+
+option go_package = "5.6-task6/pb";
+
+// IssueToken
+message IssueTokenRequest {
+    string login = 1;
+    string password = 2;
+}
+
+message IssueTokenResponse {
+    string accessToken = 1;
+    string refreshToken = 2;
+}
+
+// ValidateToken
+message ValidateTokenRequest {
+    string token = 1;
+    string type = 2;
+}
+
+message ValidateTokenResponse {
+    bool isValid = 1;
+    string subject = 2;
+}
+
+// RevokeToken
+message RevokeTokenRequest {
+    int64 userID = 1;
+    string type = 2;
+}
+
+message RevokeTokenResponse {
+    string error = 1;
+}
+
+service TokenService {
+  rpc IssueToken(IssueTokenRequest) returns (IssueTokenResponse) {}
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse) {}
+  rpc RevokeToken(RevokeTokenRequest) returns (RevokeTokenResponse) {}
+}

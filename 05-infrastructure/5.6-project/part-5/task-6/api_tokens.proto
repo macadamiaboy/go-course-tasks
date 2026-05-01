@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package api_token_v1;
 
+import "google/protobuf/empty.proto";
+
 option go_package = "5.6-task6/pb";
 
 // IssueToken
@@ -32,12 +34,8 @@ message RevokeTokenRequest {
     string type = 2;
 }
 
-message RevokeTokenResponse {
-    string error = 1;
-}
-
 service TokenService {
   rpc IssueToken(IssueTokenRequest) returns (IssueTokenResponse) {}
   rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse) {}
-  rpc RevokeToken(RevokeTokenRequest) returns (RevokeTokenResponse) {}
+  rpc RevokeToken(RevokeTokenRequest) returns (google.protobuf.Empty) {}
 }

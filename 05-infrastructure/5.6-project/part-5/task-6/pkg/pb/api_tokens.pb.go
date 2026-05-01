@@ -9,6 +9,7 @@ package pb
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -284,55 +285,11 @@ func (x *RevokeTokenRequest) GetType() string {
 	return ""
 }
 
-type RevokeTokenResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Error         string                 `protobuf:"bytes,1,opt,name=error,proto3" json:"error,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *RevokeTokenResponse) Reset() {
-	*x = RevokeTokenResponse{}
-	mi := &file_api_tokens_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *RevokeTokenResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*RevokeTokenResponse) ProtoMessage() {}
-
-func (x *RevokeTokenResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_tokens_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use RevokeTokenResponse.ProtoReflect.Descriptor instead.
-func (*RevokeTokenResponse) Descriptor() ([]byte, []int) {
-	return file_api_tokens_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *RevokeTokenResponse) GetError() string {
-	if x != nil {
-		return x.Error
-	}
-	return ""
-}
-
 var File_api_tokens_proto protoreflect.FileDescriptor
 
 const file_api_tokens_proto_rawDesc = "" +
 	"\n" +
-	"\x10api_tokens.proto\x12\fapi_token_v1\"E\n" +
+	"\x10api_tokens.proto\x12\fapi_token_v1\x1a\x1bgoogle/protobuf/empty.proto\"E\n" +
 	"\x11IssueTokenRequest\x12\x14\n" +
 	"\x05login\x18\x01 \x01(\tR\x05login\x12\x1a\n" +
 	"\bpassword\x18\x02 \x01(\tR\bpassword\"Z\n" +
@@ -347,14 +304,12 @@ const file_api_tokens_proto_rawDesc = "" +
 	"\asubject\x18\x02 \x01(\tR\asubject\"@\n" +
 	"\x12RevokeTokenRequest\x12\x16\n" +
 	"\x06userID\x18\x01 \x01(\x03R\x06userID\x12\x12\n" +
-	"\x04type\x18\x02 \x01(\tR\x04type\"+\n" +
-	"\x13RevokeTokenResponse\x12\x14\n" +
-	"\x05error\x18\x01 \x01(\tR\x05error2\x93\x02\n" +
+	"\x04type\x18\x02 \x01(\tR\x04type2\x88\x02\n" +
 	"\fTokenService\x12Q\n" +
 	"\n" +
 	"IssueToken\x12\x1f.api_token_v1.IssueTokenRequest\x1a .api_token_v1.IssueTokenResponse\"\x00\x12Z\n" +
-	"\rValidateToken\x12\".api_token_v1.ValidateTokenRequest\x1a#.api_token_v1.ValidateTokenResponse\"\x00\x12T\n" +
-	"\vRevokeToken\x12 .api_token_v1.RevokeTokenRequest\x1a!.api_token_v1.RevokeTokenResponse\"\x00B\x0eZ\f5.6-task6/pbb\x06proto3"
+	"\rValidateToken\x12\".api_token_v1.ValidateTokenRequest\x1a#.api_token_v1.ValidateTokenResponse\"\x00\x12I\n" +
+	"\vRevokeToken\x12 .api_token_v1.RevokeTokenRequest\x1a\x16.google.protobuf.Empty\"\x00B\x0eZ\f5.6-task6/pbb\x06proto3"
 
 var (
 	file_api_tokens_proto_rawDescOnce sync.Once
@@ -368,14 +323,14 @@ func file_api_tokens_proto_rawDescGZIP() []byte {
 	return file_api_tokens_proto_rawDescData
 }
 
-var file_api_tokens_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_api_tokens_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_api_tokens_proto_goTypes = []any{
 	(*IssueTokenRequest)(nil),     // 0: api_token_v1.IssueTokenRequest
 	(*IssueTokenResponse)(nil),    // 1: api_token_v1.IssueTokenResponse
 	(*ValidateTokenRequest)(nil),  // 2: api_token_v1.ValidateTokenRequest
 	(*ValidateTokenResponse)(nil), // 3: api_token_v1.ValidateTokenResponse
 	(*RevokeTokenRequest)(nil),    // 4: api_token_v1.RevokeTokenRequest
-	(*RevokeTokenResponse)(nil),   // 5: api_token_v1.RevokeTokenResponse
+	(*emptypb.Empty)(nil),         // 5: google.protobuf.Empty
 }
 var file_api_tokens_proto_depIdxs = []int32{
 	0, // 0: api_token_v1.TokenService.IssueToken:input_type -> api_token_v1.IssueTokenRequest
@@ -383,7 +338,7 @@ var file_api_tokens_proto_depIdxs = []int32{
 	4, // 2: api_token_v1.TokenService.RevokeToken:input_type -> api_token_v1.RevokeTokenRequest
 	1, // 3: api_token_v1.TokenService.IssueToken:output_type -> api_token_v1.IssueTokenResponse
 	3, // 4: api_token_v1.TokenService.ValidateToken:output_type -> api_token_v1.ValidateTokenResponse
-	5, // 5: api_token_v1.TokenService.RevokeToken:output_type -> api_token_v1.RevokeTokenResponse
+	5, // 5: api_token_v1.TokenService.RevokeToken:output_type -> google.protobuf.Empty
 	3, // [3:6] is the sub-list for method output_type
 	0, // [0:3] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
@@ -402,7 +357,7 @@ func file_api_tokens_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_tokens_proto_rawDesc), len(file_api_tokens_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

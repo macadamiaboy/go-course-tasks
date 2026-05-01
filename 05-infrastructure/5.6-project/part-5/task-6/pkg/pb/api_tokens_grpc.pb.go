@@ -11,6 +11,7 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -30,7 +31,7 @@ const (
 type TokenServiceClient interface {
 	IssueToken(ctx context.Context, in *IssueTokenRequest, opts ...grpc.CallOption) (*IssueTokenResponse, error)
 	ValidateToken(ctx context.Context, in *ValidateTokenRequest, opts ...grpc.CallOption) (*ValidateTokenResponse, error)
-	RevokeToken(ctx context.Context, in *RevokeTokenRequest, opts ...grpc.CallOption) (*RevokeTokenResponse, error)
+	RevokeToken(ctx context.Context, in *RevokeTokenRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type tokenServiceClient struct {
@@ -61,9 +62,9 @@ func (c *tokenServiceClient) ValidateToken(ctx context.Context, in *ValidateToke
 	return out, nil
 }
 
-func (c *tokenServiceClient) RevokeToken(ctx context.Context, in *RevokeTokenRequest, opts ...grpc.CallOption) (*RevokeTokenResponse, error) {
+func (c *tokenServiceClient) RevokeToken(ctx context.Context, in *RevokeTokenRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(RevokeTokenResponse)
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, TokenService_RevokeToken_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -77,7 +78,7 @@ func (c *tokenServiceClient) RevokeToken(ctx context.Context, in *RevokeTokenReq
 type TokenServiceServer interface {
 	IssueToken(context.Context, *IssueTokenRequest) (*IssueTokenResponse, error)
 	ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error)
-	RevokeToken(context.Context, *RevokeTokenRequest) (*RevokeTokenResponse, error)
+	RevokeToken(context.Context, *RevokeTokenRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedTokenServiceServer()
 }
 
@@ -94,7 +95,7 @@ func (UnimplementedTokenServiceServer) IssueToken(context.Context, *IssueTokenRe
 func (UnimplementedTokenServiceServer) ValidateToken(context.Context, *ValidateTokenRequest) (*ValidateTokenResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ValidateToken not implemented")
 }
-func (UnimplementedTokenServiceServer) RevokeToken(context.Context, *RevokeTokenRequest) (*RevokeTokenResponse, error) {
+func (UnimplementedTokenServiceServer) RevokeToken(context.Context, *RevokeTokenRequest) (*emptypb.Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method RevokeToken not implemented")
 }
 func (UnimplementedTokenServiceServer) mustEmbedUnimplementedTokenServiceServer() {}

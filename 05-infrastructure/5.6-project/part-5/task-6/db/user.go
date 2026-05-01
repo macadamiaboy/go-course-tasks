@@ -3,15 +3,9 @@ package db
 import (
 	"context"
 	"errors"
-	"time"
+
+	"github.com/jackc/pgx/v5"
 )
-
-var ErrUserNotFound = errors.New("user not found")
-
-type User struct {
-	ID    int64
-	Email string
-}
 
 type UserRepository struct {
 	db DBTX
@@ -22,40 +16,32 @@ func NewUserRepository(db DBTX) *UserRepository {
 }
 
 func (ur *UserRepository) Create(ctx context.Context, userParams User) (User, error) {
-	/*
-		query := `INSERT INTO users(email) VALUES ($1) RETURNING id, email;`
-		var user User
+	query := `INSERT INTO users(email, password_hash) VALUES ($1, $2) RETURNING id, email, password_hash;`
+	var user User
 
-		err := ur.db.QueryRow(ctx, query, userParams.Email).Scan(
-			&user.ID,
-			&user.Email,
-		)
-		if err != nil {
-			return User{}, err
-		}
-		return user, nil
-	*/
-	time.Sleep(100 * time.Millisecond)
-	return User{}, nil
+	err := ur.db.QueryRow(ctx, query, userParams.Email, userParams.PasswordHash).Scan(
+		&user.ID,
+		&user.Email,
+		&user.PasswordHash,
+	)
+	if err != nil {
+		return User{}, ErrCannotCreate
+	}
+
+	return user, nil
 }
 
-func (ur *UserRepository) GetByLogin(ctx context.Context, login string) (User, error) {
-	/*
-		query := `SELECT id, email FROM users WHERE id = $1`
-		var user User
+func (ur *UserRepository) GetByEmail(ctx context.Context, email string) (User, error) {
+	query := `SELECT id, email, password_hash FROM users WHERE email = $1`
+	var user User
 
-		err := ur.db.QueryRow(ctx, query, id).Scan(&user.ID, &user.Email)
-		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return User{}, ErrUserNotFound
-			}
-			return User{}, err
+	err := ur.db.QueryRow(ctx, query, email).Scan(&user.ID, &user.Email, &user.PasswordHash)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return User{}, ErrNoRows
 		}
-		return user, nil
-	*/
-	time.Sleep(100 * time.Millisecond)
-	if login == "unknown" {
-		return User{}, errors.New("unknown user")
+		return User{}, ErrCannotFind
 	}
-	return User{ID: 14, Email: login}, nil
+
+	return user, nil
 }

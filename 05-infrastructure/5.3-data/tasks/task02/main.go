@@ -73,7 +73,30 @@ func NewAccountService(repo AccountRepository) *AccountService {
 }
 
 func (s *AccountService) Transfer(ctx context.Context, fromID, toID, amount int64) error {
-	// TODO: implement
+	source, err := s.repo.GetByID(ctx, fromID)
+	if err != nil {
+		return fmt.Errorf("source id: %w", err)
+	}
+
+	target, err := s.repo.GetByID(ctx, toID)
+	if err != nil {
+		return fmt.Errorf("target id: %w", err)
+	}
+
+	if source.Balance < amount {
+		return ErrInsufficientFunds
+	}
+
+	source.Balance -= amount
+	target.Balance += amount
+
+	if err = s.repo.Update(ctx, source); err != nil {
+		return err
+	}
+	if err = s.repo.Update(ctx, target); err != nil {
+		return err
+	}
+
 	return nil
 }
 

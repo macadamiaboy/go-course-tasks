@@ -63,18 +63,35 @@ func handleCreateOrder(w http.ResponseWriter, r *http.Request) {
 	// TODO: декодируй JSON-тело запроса в orderRequest
 	// Подсказка: json.NewDecoder(r.Body).Decode(&req)
 	// При ошибке декодирования верни 400 с apiError{Error: "invalid json"}
+	var request orderRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		writeJSON(w, http.StatusBadRequest, apiError{"invalid json"})
+		return
+	}
 
 	// TODO: проверь, что поле Item не пустое
 	// Если пустое — верни 400 с apiError{Error: "item is required"}
+	if request.Item == "" {
+		http.Error(w, "item required", http.StatusBadRequest)
+		//w.Header().Set("Content-Type", "application/json")
+		//json.NewEncoder(w).Encode(apiError{"item is required"})
+		//writeJSON(w, http.StatusBadRequest, apiError{"item is required"})
+		return
+	}
 
 	// TODO: сформируй orderResponse:
 	//   OrderID:  fmt.Sprintf("ord-%d", time.Now().UnixNano())
 	//   Item:     req.Item
 	//   Quantity: req.Quantity
 	//   Status:   "created"
+	response := orderResponse{
+		OrderID:  fmt.Sprintf("ord-%d", time.Now().UnixNano()),
+		Item:     request.Item,
+		Quantity: request.Quantity,
+		Status:   "created",
+	}
 
 	// TODO: верни ответ со статусом 201 (http.StatusCreated)
 	// Подсказка: writeJSON(w, http.StatusCreated, resp)
-
-	_ = fmt.Sprintf("ord-%d", time.Now().UnixNano()) // убери после реализации
+	writeJSON(w, http.StatusCreated, response)
 }

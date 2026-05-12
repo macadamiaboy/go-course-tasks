@@ -1,0 +1,1 @@
+ALTER TABLE accounts ADD CONSTRAINT check_coins_non_negative CHECK (coins >= 0);

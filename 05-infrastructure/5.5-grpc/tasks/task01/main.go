@@ -28,6 +28,7 @@ type GetOrderResponse struct {
 }
 
 var ErrOrderNotFound = errors.New("order not found")
+var ErrNoDataProvided = errors.New("there's no provided data")
 
 type OrderServiceServer interface {
 	CreateOrder(ctx context.Context, req *CreateOrderRequest) (*CreateOrderResponse, error)
@@ -61,12 +62,33 @@ func NewOrderService() OrderServiceServer {
 
 func (s *orderServiceImpl) CreateOrder(ctx context.Context, req *CreateOrderRequest) (*CreateOrderResponse, error) {
 	// TODO: validate input, store order, return response
-	return &CreateOrderResponse{}, nil
+	if req.CustomerID == "" {
+		return &CreateOrderResponse{Status: ErrNoDataProvided.Error()}, fmt.Errorf("customer id: %w", ErrNoDataProvided)
+	}
+
+	if req.Items == nil {
+		return &CreateOrderResponse{Status: ErrNoDataProvided.Error()}, fmt.Errorf("items: %w", ErrNoDataProvided)
+	}
+
+	orderId := fmt.Sprintf("order-%d", s.nextID)
+	order := order{id: orderId, customerID: req.CustomerID, items: req.Items, status: "created"}
+
+	s.orders[orderId] = order
+	s.nextID++
+
+	response := CreateOrderResponse{Status: "created", OrderID: orderId}
+
+	return &response, nil
 }
 
 func (s *orderServiceImpl) GetOrder(ctx context.Context, req *GetOrderRequest) (*GetOrderResponse, error) {
 	// TODO: look up order by ID, return ErrOrderNotFound if missing
-	return &GetOrderResponse{}, nil
+	order, ok := s.orders[req.OrderID]
+	if !ok {
+		return &GetOrderResponse{Status: ErrOrderNotFound.Error()}, ErrOrderNotFound
+	}
+
+	return &GetOrderResponse{OrderID: order.id, CustomerID: order.customerID, Items: order.items, Status: "ok"}, nil
 }
 
 func main() {

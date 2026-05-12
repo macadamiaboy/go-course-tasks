@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"strconv"
 	"time"
 
 	"5.6/task-6/pkg/pb"
@@ -56,14 +55,11 @@ func authHandler(client pb.TokenServiceClient) http.HandlerFunc {
 					respStatus = http.StatusInternalServerError
 				}
 			}
-			w.WriteHeader(respStatus)
-			_, _ = w.Write([]byte(strconv.Itoa(respStatus)))
+			writeJSON(w, respStatus, apiError{st.Message()})
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(respStatus)
-		_ = json.NewEncoder(w).Encode(resp)
+		writeJSON(w, respStatus, resp)
 	}
 }
 
@@ -98,14 +94,11 @@ func revokeHandler(client pb.TokenServiceClient) http.HandlerFunc {
 					respStatus = http.StatusInternalServerError
 				}
 			}
-			w.WriteHeader(respStatus)
-			_, _ = w.Write([]byte(strconv.Itoa(respStatus)))
+			writeJSON(w, respStatus, apiError{st.Message()})
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(respStatus)
-		_ = json.NewEncoder(w).Encode(resp)
+		writeJSON(w, respStatus, resp)
 	}
 }
 
@@ -140,14 +133,11 @@ func validateHandler(client pb.TokenServiceClient) http.HandlerFunc {
 					respStatus = http.StatusInternalServerError
 				}
 			}
-			w.WriteHeader(respStatus)
-			_, _ = w.Write([]byte(strconv.Itoa(respStatus)))
+			writeJSON(w, respStatus, apiError{st.Message()})
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(respStatus)
-		_ = json.NewEncoder(w).Encode(resp)
+		writeJSON(w, respStatus, resp)
 	}
 }
 

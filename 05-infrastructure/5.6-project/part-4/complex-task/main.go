@@ -21,6 +21,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // importing this data from env
@@ -150,6 +151,22 @@ func initTracer() (*sdktrace.TracerProvider, error) {
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
 	return tp, nil
+}
+
+func (h *TraceHandler) Handle(ctx context.Context, r slog.Record) error {
+	if ctx == nil {
+		return h.Handler.Handle(ctx, r)
+	}
+
+	span := trace.SpanFromContext(ctx)
+	if spanCtx := span.SpanContext(); spanCtx.IsValid() {
+		r.AddAttrs(
+			slog.String("trace_id", spanCtx.TraceID().String()),
+			slog.String("span_id", spanCtx.SpanID().String()),
+		)
+	}
+
+	return h.Handler.Handle(ctx, r)
 }
 
 func main() {

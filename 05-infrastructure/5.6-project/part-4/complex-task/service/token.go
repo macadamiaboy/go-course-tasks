@@ -9,10 +9,13 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 )
 
 var LoginError = errors.New("failed to login the user")
 var ErrFailedToValidate = errors.New("validation faliure")
+
+var tracer = otel.Tracer("complex-task/token-service")
 
 type TokenService struct {
 	tokenRepo db.RefreshTokenRepository
@@ -49,11 +52,14 @@ func NewTokenService(tokenRepo db.RefreshTokenRepository, userRepo db.UserReposi
 }
 
 func (s *TokenService) IssueToken(ctx context.Context, req UserData) (*PairOfTokens, error) {
-	_, span := otel.Tracer("token-service").Start(ctx, "Service.IssueToken")
+	ctx, span := tracer.Start(ctx, "Service.IssueToken")
 	defer span.End()
 
 	user, err := s.userRepo.GetByEmail(ctx, req.Email)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+
 		return nil, LoginError
 	}
 	/*
@@ -63,11 +69,17 @@ func (s *TokenService) IssueToken(ctx context.Context, req UserData) (*PairOfTok
 	*/
 	accessToken, err := helpers.GenToken(user.ID)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+
 		return nil, fmt.Errorf("issueToken, genToken err: %w", err)
 	}
 
 	refreshToken, err := helpers.GenRefreshToken()
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+
 		return nil, fmt.Errorf("issueToken, genRefreshToken err: %w", err)
 	}
 
@@ -76,6 +88,9 @@ func (s *TokenService) IssueToken(ctx context.Context, req UserData) (*PairOfTok
 
 	_, err = s.tokenRepo.Create(ctx, db.RefreshToken{UserID: user.ID, TokenHash: tokenHash, ExpiresAt: expiresAt})
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+
 		return nil, fmt.Errorf("issueToken, cannot save the token, err: %w", err)
 	}
 
@@ -86,11 +101,17 @@ func (s *TokenService) IssueToken(ctx context.Context, req UserData) (*PairOfTok
 }
 
 func (s *TokenService) ValidateToken(ctx context.Context, tokenReq ValidationRequest) (*ValidationResponse, error) {
+	ctx, span := tracer.Start(ctx, "Service.ValidateToken")
+	defer span.End()
+
 	badResult := &ValidationResponse{IsValid: false}
 
 	hashedIncomingToken := helpers.HashToken(tokenReq.RefreshToken)
 	tokenData, err := s.tokenRepo.GetByHash(ctx, db.RefreshToken{TokenHash: hashedIncomingToken})
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+
 		if errors.Is(err, db.ErrNoRows) {
 			return badResult, fmt.Errorf("%w, not found", ErrFailedToValidate)
 		}
@@ -98,10 +119,18 @@ func (s *TokenService) ValidateToken(ctx context.Context, tokenReq ValidationReq
 	}
 
 	if tokenData.IsRevoked {
+		err = errors.New("token is revoked")
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+
 		return badResult, fmt.Errorf("%w, is revoked", ErrFailedToValidate)
 	}
 
 	if tokenData.ExpiresAt.Before(time.Now()) {
+		err = errors.New("token has been expired")
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+
 		return badResult, fmt.Errorf("%w, has been expired", ErrFailedToValidate)
 	}
 
@@ -109,13 +138,22 @@ func (s *TokenService) ValidateToken(ctx context.Context, tokenReq ValidationReq
 }
 
 func (s *TokenService) RevokeToken(ctx context.Context, userIDReq RevokeTokenRequest) error {
+	ctx, span := tracer.Start(ctx, "Service.RevokeToken")
+	defer span.End()
+
 	token, err := s.tokenRepo.FindActive(ctx, db.RefreshToken{UserID: userIDReq.UserId})
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+
 		return fmt.Errorf("revokeToken, couldn't find the active token, err: %w", err)
 	}
 
 	err = s.tokenRepo.Revoke(ctx, token)
 	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.RecordError(err)
+
 		return fmt.Errorf("revokeToken, couldn't revoke the token, err: %w", err)
 	}
 

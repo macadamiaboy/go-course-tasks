@@ -55,15 +55,28 @@ go-course-tasks/
 │
 ├── 05-infrastructure/
 │   ├── 5.1-http/                 — HTTP-сервер: net/http
-│   ├── 5.2-middleware/           — middleware: цепочка обработчиков
+│   ├── 5.2-middleware/
+│   │   ├── tasks/
+│   │   │   ├── task01/           — Chain helper: порядок middleware
+│   │   │   ├── task02/           — LoggingMiddleware: slog + statusRecorder
+│   │   │   ├── task03/           — extractBearerToken: парсинг заголовка
+│   │   │   ├── task04/           — AuthMiddleware: TokenVerifier + context
+│   │   │   ├── task05/           — JWT/Paseto адаптеры под один интерфейс
+│   │   │   ├── task06/           — Интеграция: публичный и защищённый endpoint
+│   │   │   ├── task07/           — RecoveryMiddleware: defer + recover
+│   │   │   └── task08/           — RateLimitMiddleware: fixed window per IP
+│   │   └── solutions/            — решения к task01-task08
 │   ├── 5.3-data/                 — работа с данными
 │   ├── 5.4-observability/        — slog, метрики, трейсинг
 │   ├── 5.5-grpc/                 — Protobuf & gRPC
 │   └── 5.6-project/              — практическое задание
 │
 └── 06-architecture/
-    ├── 6.2-clean-arch/tasks/
-    │   └── task01/               — Repository + Service для товаров
+    ├── 6.2-clean-arch/
+    │   ├── tasks/
+    │   │   ├── task01/           — Repository + Service для товаров
+    │   │   └── task02/           — Добавить HTTP handler к task01
+    │   └── solutions/            — решения к task01-task02
     └── 6.3-testing/tasks/
         └── task01/               — табличные тесты и фаззинг парсера
 ```

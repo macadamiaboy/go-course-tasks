@@ -1,47 +1,25 @@
-// Задача: Sentinel error
+// Задача 2: Проверка пустого имени
 //
 // Ожидаемый вывод:
-//   buy ok
-//   out of stock: show restock page
+//   user created: Alice
+//   error: name is empty
 
 package main
 
 import (
-	"errors"
 	"fmt"
 )
 
-// TODO: объяви sentinel error:
-//
-//	var ErrOutOfStock = errors.New("out of stock")
-//	(не забудь импортировать "errors")
-var ErrOutOfStock = errors.New("out of stock")
-
-// TODO: напиши функцию buyItem(count int) error
-//
-//	если count == 0, верни ErrOutOfStock
-//	иначе верни nil
-func buyItem(count int) error {
-	if count == 0 {
-		return ErrOutOfStock
-	}
-	return nil
-}
+// TODO: напиши функцию createUser(name string) error
+//       если name == "", верни errors.New("name is empty")
+//       иначе выведи "user created: <name>" и верни nil
+//       (не забудь импортировать "errors")
 
 func main() {
-	// TODO: вызови buyItem(5)
-	//       если ошибки нет — выведи "buy ok"
-	err := buyItem(5)
-	if err == nil {
-		fmt.Println("buy ok")
+	if err := createUser("Alice"); err != nil {
+		fmt.Println("error:", err)
 	}
-
-	// TODO: вызови buyItem(0)
-	//       если errors.Is(err, ErrOutOfStock) — выведи "out of stock: show restock page"
-	err = buyItem(0)
-	if err != nil {
-		if errors.Is(err, ErrOutOfStock) {
-			fmt.Println("out of stock: show restock page")
-		}
+	if err := createUser(""); err != nil {
+		fmt.Println("error:", err)
 	}
 }

@@ -62,11 +62,17 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"log/slog"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/course/token-service/internal/db"
+	"github.com/course/token-service/internal/helpers"
+	"github.com/course/token-service/internal/observability"
+	"github.com/course/token-service/internal/service"
+	"github.com/course/token-service/internal/transport/http/handler"
+	"github.com/course/token-service/internal/transport/http/middleware"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // =============================================================================
@@ -187,24 +193,98 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
+func Chain(h http.Handler, middlewares ...middleware.Middleware) http.Handler {
+	for i := len(middlewares) - 1; i >= 0; i-- {
+		h = middlewares[i](h)
+	}
+	return h
+}
+
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil)).With(
-		"service", "token-service",
-		"env", "development",
-		"version", "0.1.0",
-	)
+	logger := observability.NewLogger("token-service", "development", "0.1.0")
 
 	ctx := context.Background()
-	_ = ctx
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", healthHandler)
 
 	// TODO: подключи DATABASE_URL и инициализируй pgxpool
+	pool, err := helpers.InitDB(ctx, logger)
+	if err != nil {
+		logger.Error("pgx pool init failed", "error", err)
+		return
+	}
+	defer pool.Close()
+
 	// TODO: инициализируй OTel TracerProvider
+	tp, err := observability.InitTracer()
+	if err != nil {
+		logger.Error("tracer provider init failed", "error", err)
+		return
+	}
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		if err := tp.Shutdown(shutdownCtx); err != nil {
+			logger.Error("tracer stoppage failed", "error", err)
+		}
+	}()
+
 	// TODO: зарегистрируй Prometheus-метрики
+	httpMetrics := observability.NewHTTPMetrics()
+	authMetrics := observability.NewAuthMetrics()
+
+	queries := db.New(pool)
+	tokenService := service.NewTokenService(pool, queries, authMetrics)
+	tokenHandler := handler.NewTokenHandler(tokenService, logger)
+
 	// TODO: добавь роуты /auth/register, /auth/login, /auth/refresh, /auth/logout, /auth/me
+	mux.Handle(
+		"POST /api/register",
+		Chain(
+			http.HandlerFunc(tokenHandler.Register),
+			middleware.LoggingMiddleware(logger),
+			middleware.MetricsMiddleware(httpMetrics),
+		),
+	)
+	mux.Handle(
+		"POST /api/login",
+		Chain(
+			http.HandlerFunc(tokenHandler.Login),
+			middleware.LoggingMiddleware(logger),
+			middleware.MetricsMiddleware(httpMetrics),
+		),
+	)
+	mux.Handle(
+		"POST /api/refresh",
+		Chain(
+			http.HandlerFunc(tokenHandler.Refresh),
+			middleware.LoggingMiddleware(logger),
+			middleware.MetricsMiddleware(httpMetrics),
+			middleware.AuthMiddleware(logger),
+		),
+	)
+	mux.Handle(
+		"POST /api/logout",
+		Chain(
+			http.HandlerFunc(tokenHandler.Logout),
+			middleware.LoggingMiddleware(logger),
+			middleware.MetricsMiddleware(httpMetrics),
+			middleware.AuthMiddleware(logger),
+		),
+	)
+	mux.Handle(
+		"GET /api/me",
+		Chain(
+			http.HandlerFunc(tokenHandler.Validate),
+			middleware.LoggingMiddleware(logger),
+			middleware.MetricsMiddleware(httpMetrics),
+			middleware.AuthMiddleware(logger),
+		),
+	)
+
 	// TODO: добавь GET /metrics для Prometheus
+	mux.Handle("/metrics", promhttp.Handler())
 
 	srv := &http.Server{
 		Addr:              ":8080",
@@ -219,5 +299,4 @@ func main() {
 		logger.Error("server failed", "error", err)
 		os.Exit(1)
 	}
-	fmt.Println("TODO: implement Token Service — see stage comments above")
 }

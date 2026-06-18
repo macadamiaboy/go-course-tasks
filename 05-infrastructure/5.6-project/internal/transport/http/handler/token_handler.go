@@ -14,7 +14,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 )
 
-var tracer = otel.Tracer("5.6-project/handler/token-handler")
+var tracer = otel.Tracer("/http/handler/token-handler")
 
 type userCredentialsReq struct {
 	Email    string `json:"email"`

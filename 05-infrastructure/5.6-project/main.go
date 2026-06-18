@@ -64,15 +64,24 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
+	"github.com/course/token-service/internal/app"
 	"github.com/course/token-service/internal/db"
 	"github.com/course/token-service/internal/helpers"
 	"github.com/course/token-service/internal/observability"
 	"github.com/course/token-service/internal/service"
+	grpcServiceSrv "github.com/course/token-service/internal/transport/grpc"
+	"github.com/course/token-service/internal/transport/grpc/interceptor"
 	"github.com/course/token-service/internal/transport/http/handler"
 	"github.com/course/token-service/internal/transport/http/middleware"
+	"github.com/course/token-service/pkg/pb"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"google.golang.org/grpc"
 )
 
 // =============================================================================
@@ -230,6 +239,11 @@ func main() {
 		}
 	}()
 
+	notifyCtx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	errCh := make(chan error, 1)
+
 	// TODO: зарегистрируй Prometheus-метрики
 	httpMetrics := observability.NewHTTPMetrics()
 	authMetrics := observability.NewAuthMetrics()
@@ -237,6 +251,8 @@ func main() {
 	queries := db.New(pool)
 	tokenService := service.NewTokenService(pool, queries, authMetrics)
 	tokenHandler := handler.NewTokenHandler(tokenService, logger)
+
+	grpcTokenServiceServer := grpcServiceSrv.NewTokenServiceServer(*tokenService, logger)
 
 	// TODO: добавь роуты /auth/register, /auth/login, /auth/refresh, /auth/logout, /auth/me
 	mux.Handle(
@@ -286,17 +302,43 @@ func main() {
 	// TODO: добавь GET /metrics для Prometheus
 	mux.Handle("/metrics", promhttp.Handler())
 
-	srv := &http.Server{
-		Addr:              ":8080",
-		Handler:           mux,
-		ReadHeaderTimeout: 5 * time.Second,
-		WriteTimeout:      10 * time.Second,
-		IdleTimeout:       60 * time.Second,
+	filter := otelhttp.WithFilter(func(r *http.Request) bool {
+		return r.URL.Path != "/health" && r.URL.Path != "/metrics"
+	})
+	wrappedMux := otelhttp.NewHandler(mux, "token-api", filter)
+
+	httpSrv := app.StartHttpServer(logger, ":8080", wrappedMux, errCh)
+
+	grpcOpts := []grpc.ServerOption{
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
+		grpc.ChainUnaryInterceptor(
+			interceptor.LoggingUnaryInterceptor(logger),
+			interceptor.MetricsUnaryInterceptor(httpMetrics.RequestsTotal, httpMetrics.RequestsDuration),
+			interceptor.AuthUnaryInterceptor,
+		),
 	}
 
-	logger.Info("server started", "addr", ":8080")
-	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		logger.Error("server failed", "error", err)
-		os.Exit(1)
+	registerFunc := func(registrar grpc.ServiceRegistrar) {
+		pb.RegisterTokenServiceServer(registrar, grpcTokenServiceServer)
 	}
+
+	grpcServer, _ := app.StartGRPCServer(logger, ":50051", errCh, grpcOpts, registerFunc)
+
+	select {
+	case <-notifyCtx.Done():
+		logger.Info("received a shutdown signal")
+	case err := <-errCh:
+		logger.Error("critical server error. Shutting down", "error", err)
+	}
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := httpSrv.Shutdown(shutdownCtx); err != nil {
+		logger.Error("failed to shutdown servers", "error", err)
+	}
+
+	grpcServer.GracefulStop()
+	logger.Info("both servers had successfully been shut duwn")
+
 }

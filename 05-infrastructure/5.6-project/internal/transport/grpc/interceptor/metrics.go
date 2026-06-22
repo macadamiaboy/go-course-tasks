@@ -2,6 +2,7 @@ package interceptor
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -18,9 +19,21 @@ func MetricsUnaryInterceptor(totalReqsCounter *prometheus.CounterVec, durationHi
 		st, _ := status.FromError(err)
 		statusCode := st.Code().String()
 
-		totalReqsCounter.WithLabelValues("gRPC", info.FullMethod, statusCode).Inc()
-		durationHistogram.WithLabelValues("gRPC", info.FullMethod).Observe(time.Since(start).Seconds())
+		service, method := parseFullMethod(info.FullMethod)
+
+		totalReqsCounter.WithLabelValues(service, method, statusCode).Inc()
+		durationHistogram.WithLabelValues(service, method).Observe(time.Since(start).Seconds())
 
 		return resp, err
 	}
+}
+
+func parseFullMethod(fullMethod string) (service string, method string) {
+	trimmedFullMethod := strings.TrimPrefix(fullMethod, "/")
+	parts := strings.SplitN(trimmedFullMethod, "/", 2)
+
+	if len(parts) != 2 {
+		return "unknown", fullMethod
+	}
+	return parts[0], parts[1]
 }

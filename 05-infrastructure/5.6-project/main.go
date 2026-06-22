@@ -242,17 +242,18 @@ func main() {
 	notifyCtx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	errCh := make(chan error, 1)
+	errCh := make(chan error, 2)
 
 	// TODO: зарегистрируй Prometheus-метрики
 	httpMetrics := observability.NewHTTPMetrics()
+	grpcMetrics := observability.NewGRPCMetrics()
 	authMetrics := observability.NewAuthMetrics()
 
 	queries := db.New(pool)
 	tokenService := service.NewTokenService(pool, queries, authMetrics)
 	tokenHandler := handler.NewTokenHandler(tokenService, logger)
 
-	grpcTokenServiceServer := grpcServiceSrv.NewTokenServiceServer(*tokenService, logger)
+	grpcTokenServiceServer := grpcServiceSrv.NewTokenServiceServer(tokenService, logger)
 
 	// TODO: добавь роуты /auth/register, /auth/login, /auth/refresh, /auth/logout, /auth/me
 	mux.Handle(
@@ -313,7 +314,7 @@ func main() {
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(
 			interceptor.LoggingUnaryInterceptor(logger),
-			interceptor.MetricsUnaryInterceptor(httpMetrics.RequestsTotal, httpMetrics.RequestsDuration),
+			interceptor.MetricsUnaryInterceptor(grpcMetrics.RequestsTotal, grpcMetrics.RequestsDuration),
 			interceptor.AuthUnaryInterceptor,
 		),
 	}
@@ -322,7 +323,13 @@ func main() {
 		pb.RegisterTokenServiceServer(registrar, grpcTokenServiceServer)
 	}
 
-	grpcServer, _ := app.StartGRPCServer(logger, ":50051", errCh, grpcOpts, registerFunc)
+	grpcServer, grpcLis, err := app.StartGRPCServer(logger, ":50051", errCh, grpcOpts, registerFunc)
+	if err != nil {
+		logger.Error("failed to shutdown servers", "error", err)
+		return
+	}
+
+	defer grpcLis.Close()
 
 	select {
 	case <-notifyCtx.Done():
@@ -331,7 +338,13 @@ func main() {
 		logger.Error("critical server error. Shutting down", "error", err)
 	}
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	select {
+	case err := <-errCh:
+		logger.Error("critical server error. Shutting down", "error", err)
+	default:
+	}
+
+	shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	if err := httpSrv.Shutdown(shutdownCtx); err != nil {
@@ -339,6 +352,6 @@ func main() {
 	}
 
 	grpcServer.GracefulStop()
-	logger.Info("both servers had successfully been shut duwn")
+	logger.Info("both servers had successfully been shut down")
 
 }

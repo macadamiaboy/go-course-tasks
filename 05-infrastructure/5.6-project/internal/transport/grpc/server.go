@@ -17,12 +17,12 @@ import (
 var tracer = otel.Tracer("/grpc/server")
 
 type TokenServiceServer struct {
-	tokenService service.TokenService
+	tokenService *service.TokenService
 	logger       *slog.Logger
 	pb.UnimplementedTokenServiceServer
 }
 
-func NewTokenServiceServer(tokenService service.TokenService, logger *slog.Logger) *TokenServiceServer {
+func NewTokenServiceServer(tokenService *service.TokenService, logger *slog.Logger) *TokenServiceServer {
 	return &TokenServiceServer{tokenService: tokenService, logger: logger}
 }
 
@@ -86,7 +86,7 @@ func (s *TokenServiceServer) ValidateToken(ctx context.Context, in *pb.ValidateT
 		span.RecordError(err)
 		s.logger.ErrorContext(ctx, errString, "error", err.Error())
 
-		return &pb.ValidateTokenResponse{UserId: "", IsValid: false}, status.Error(codes.Unauthenticated, errString)
+		return nil, status.Error(codes.Unauthenticated, errString)
 	}
 
 	userIDstr := strconv.FormatInt(userID, 10)
@@ -118,11 +118,11 @@ func (s *TokenServiceServer) RevokeToken(ctx context.Context, in *pb.RevokeToken
 			errString := "invalid token"
 			s.logger.ErrorContext(ctx, errString, "error", err.Error())
 
-			return &pb.RevokeTokenResponse{IsRevoked: false}, status.Error(codes.Unauthenticated, errString)
+			return nil, status.Error(codes.Unauthenticated, errString)
 		}
 		errString := "internal server error"
 		s.logger.ErrorContext(ctx, errString, "error", err.Error())
-		return &pb.RevokeTokenResponse{IsRevoked: false}, status.Error(codes.Internal, errString)
+		return nil, status.Error(codes.Internal, errString)
 	}
 
 	return &pb.RevokeTokenResponse{IsRevoked: true}, nil

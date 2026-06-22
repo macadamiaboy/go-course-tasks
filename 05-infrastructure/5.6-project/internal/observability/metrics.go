@@ -34,6 +34,26 @@ func NewHTTPMetrics() *HTTPMetrics {
 	}
 }
 
+func NewGRPCMetrics() *HTTPMetrics {
+	return &HTTPMetrics{
+		RequestsTotal: promauto.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "grpc_requests_total",
+				Help: "Total number of gRPC requests.",
+			},
+			[]string{"service", "method", "code"},
+		),
+		RequestsDuration: promauto.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Name:    "grpcs_request_duration_seconds",
+				Help:    "gRPC request latency in seconds.",
+				Buckets: prometheus.DefBuckets,
+			},
+			[]string{"service", "method"},
+		),
+	}
+}
+
 func NewAuthMetrics() *AuthMetrics {
 	return &AuthMetrics{
 		TokensIssued: promauto.NewCounterVec(

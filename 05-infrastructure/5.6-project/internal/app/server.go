@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -9,11 +10,6 @@ import (
 
 	"google.golang.org/grpc"
 )
-
-type App struct {
-	HTTPServer *http.Server
-	GRPCServer *grpc.Server
-}
 
 func StartHttpServer(logger *slog.Logger, addr string, mux http.Handler, errCh chan<- error) *http.Server {
 	srv := &http.Server{
@@ -41,12 +37,11 @@ func StartGRPCServer(
 	errCh chan<- error,
 	opts []grpc.ServerOption,
 	registerService func(grpc.ServiceRegistrar),
-) (*grpc.Server, net.Listener) {
+) (*grpc.Server, net.Listener, error) {
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		logger.Error("failed to listen on gRPC port", "addr", addr, "error", err)
-		errCh <- err
-		return nil, nil
+		return nil, nil, fmt.Errorf("failed to listen on gRPC port %s: %w", addr, err)
 	}
 
 	srv := grpc.NewServer(opts...)
@@ -63,5 +58,5 @@ func StartGRPCServer(
 		}
 	}()
 
-	return srv, lis
+	return srv, lis, nil
 }

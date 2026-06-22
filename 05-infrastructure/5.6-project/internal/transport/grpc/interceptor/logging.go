@@ -22,7 +22,6 @@ func LoggingUnaryInterceptor(logger *slog.Logger) grpc.UnaryServerInterceptor {
 			"method", info.FullMethod,
 			"status", statusCode,
 			"duration", time.Since(start),
-			"request", req,
 		)
 
 		return resp, err

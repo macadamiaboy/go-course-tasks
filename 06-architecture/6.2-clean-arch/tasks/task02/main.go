@@ -36,6 +36,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/go-course/clean-arch-task02/domain"
 	"github.com/go-course/clean-arch-task02/repository"
 	"github.com/go-course/clean-arch-task02/service"
 )
@@ -46,28 +47,75 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 	_ = json.NewEncoder(w).Encode(payload)
 }
 
+type apiError struct {
+	Error string `json:"error"`
+}
+
+func writeError(w http.ResponseWriter, status int, msg string) {
+	resp := apiError{msg}
+	writeJSON(w, status, resp)
+}
+
+type productServiceInterface interface {
+	Create(name string, price float64, stock int) (domain.Product, error)
+	List() ([]domain.Product, error)
+	Buy(productID int, quantity int) error
+}
+
 // TODO: определи тип ProductHandler со полем svc *service.ProductService
 // (в финальном решении — через интерфейс, но для старта используй конкретный тип)
+type ProductHandler struct {
+	svc productServiceInterface
+}
 
 // TODO: реализуй конструктор NewProductHandler(svc *service.ProductService) *ProductHandler
+func NewProductHandler(svc productServiceInterface) *ProductHandler {
+	return &ProductHandler{svc: svc}
+}
 
 // TODO: реализуй метод (h *ProductHandler) Create(w http.ResponseWriter, r *http.Request)
 // Логика:
-//   1. Декодируй JSON-тело в структуру с полями Name, Price, Stock
-//   2. Вызови h.svc.Create(name, price, stock)
-//   3. При ошибке — 400 {"error":"..."}
-//   4. При успехе — 201 + JSON товара
+//  1. Декодируй JSON-тело в структуру с полями Name, Price, Stock
+//  2. Вызови h.svc.Create(name, price, stock)
+//  3. При ошибке — 400 {"error":"..."}
+//  4. При успехе — 201 + JSON товара
+func (h *ProductHandler) Create(w http.ResponseWriter, r *http.Request) {
+	req := struct {
+		Name  string  `json:"name"`
+		Price float64 `json:"price"`
+		Stock int     `json:"stock"`
+	}{}
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad request")
+	}
+
+	product, err := h.svc.Create(req.Name, req.Price, req.Stock)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad request")
+	}
+
+	writeJSON(w, http.StatusCreated, product)
+}
 
 // TODO: реализуй метод (h *ProductHandler) List(w http.ResponseWriter, r *http.Request)
 // Логика:
-//   1. Вызови h.svc.List()
-//   2. Верни 200 + JSON-массив товаров
+//  1. Вызови h.svc.List()
+//  2. Верни 200 + JSON-массив товаров
+func (h *ProductHandler) List(w http.ResponseWriter, r *http.Request) {
+	products, err := h.svc.List()
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "bad request")
+	}
+
+	writeJSON(w, http.StatusCreated, products)
+}
 
 func main() {
 	repo := repository.NewInMemoryProductRepository()
 	svc := service.NewProductService(repo)
-	_ = svc // убери после реализации
-	_ = writeJSON
+	h := NewProductHandler(svc)
 
 	mux := http.NewServeMux()
 
@@ -75,6 +123,8 @@ func main() {
 	// h := NewProductHandler(svc)
 	// mux.HandleFunc("POST /products", h.Create)
 	// mux.HandleFunc("GET /products", h.List)
+	mux.HandleFunc("POST /products", h.Create)
+	mux.HandleFunc("GET /products", h.List)
 
 	fmt.Println("server started on :8080")
 	if err := http.ListenAndServe(":8080", mux); err != nil {

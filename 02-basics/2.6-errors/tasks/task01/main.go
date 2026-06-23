@@ -21,11 +21,28 @@ package main
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
 // TODO: определи тип ValidationError и метод Error() string
+type ValidationError struct {
+	Field   string
+	Message string
+}
+
+func (ve ValidationError) Error() string { return fmt.Sprintf("%s: %s", ve.Field, ve.Message) }
 
 // TODO: напиши функцию validateUser(name, email string) error
+func validateUser(name, email string) error {
+	switch {
+	case name == "":
+		return &ValidationError{Field: "name", Message: "обязательное поле"}
+	case !strings.Contains(email, "@"):
+		return &ValidationError{Field: "email", Message: "неверный формат (нет @)"}
+	default:
+		return nil
+	}
+}
 
 func main() {
 	// TODO: вызови validateUser с невалидным email, например validateUser("Аня", "anya.mail")
@@ -35,6 +52,9 @@ func main() {
 	//     fmt.Printf(...)
 	// }
 
-	_ = errors.As // убери когда начнёшь использовать errors
-	_ = fmt.Println
+	err := validateUser("Даня", "1.yandex.com")
+	var vErr *ValidationError
+	if errors.As(err, &vErr) {
+		fmt.Println(vErr.Error())
+	}
 }

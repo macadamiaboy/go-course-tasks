@@ -46,19 +46,60 @@ type User struct {
 }
 
 // TODO: var ErrNotFound = errors.New("not found")
+var ErrNotFound = errors.New("not found")
 
 // TODO: type ValidationError struct { Field, Message string } + метод Error()
+type ValidationError struct {
+	Field   string
+	Message string
+}
+
+func (ve ValidationError) Error() string { return fmt.Sprintf("%s: %s", ve.Field, ve.Message) }
 
 // TODO: func repoGetUser(id int) (*User, error)
+func repoGetUser(id int) (*User, error) {
+	if id == 42 {
+		return &User{ID: 42, Name: "John Doe"}, nil
+	}
+	return nil, fmt.Errorf("get user %d: %w", id, ErrNotFound)
+}
 
 // TODO: func serviceGetUser(id int) (*User, error)
+func serviceGetUser(id int) (*User, error) {
+	if id <= 0 {
+		return nil, &ValidationError{Field: "id", Message: "должен быть > 0"}
+	}
+
+	user, err := repoGetUser(id)
+	if err != nil {
+		return nil, fmt.Errorf("repo err: %w", err)
+	}
+	return user, nil
+}
 
 // TODO: func handlerGetUser(id int)
+func handlerGetUser(id int) {
+	user, err := serviceGetUser(id)
+	if err != nil {
+		var vErr *ValidationError
+		switch {
+		case errors.Is(err, ErrNotFound):
+			fmt.Println("HTTP 404: not found")
+			return
+		case errors.As(err, &vErr):
+			fmt.Printf("HTTP 400: %s\n", vErr)
+			return
+		default:
+			fmt.Printf("HTTP 500: %s\n", err)
+			return
+		}
+	}
+	fmt.Printf("пользователь найден: %s\n", user.Name)
+}
 
 func main() {
 	// TODO: вызови handlerGetUser(42), handlerGetUser(999), handlerGetUser(-1)
-
-	_ = errors.Is
-	_ = errors.As
-	_ = fmt.Println
+	handlerGetUser(42)
+	handlerGetUser(999)
+	handlerGetUser(-1)
 }

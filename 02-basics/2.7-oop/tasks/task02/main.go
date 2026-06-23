@@ -32,17 +32,38 @@ import (
 )
 
 // TODO: type Shape interface { Area() float64; Perimeter() float64 }
+type Shape interface {
+	Area() float64
+	Perimeter() float64
+}
 
 // TODO: type Circle struct { Radius float64 } + методы Area, Perimeter
+type Circle struct {
+	Radius float64
+}
+
+func (c Circle) Area() float64 { return math.Pi * c.Radius * c.Radius }
+
+func (c Circle) Perimeter() float64 { return math.Pi * c.Radius * 2 }
 
 // TODO: type Rectangle struct { Width, Height float64 } + методы Area, Perimeter
+type Rectangle struct {
+	Width  float64
+	Height float64
+}
+
+func (r Rectangle) Area() float64 { return r.Width * r.Height }
+
+func (r Rectangle) Perimeter() float64 { return (r.Width + r.Height) * 2 }
 
 // TODO: func printShapeInfo(name string, s Shape)
+func printShapeInfo(name string, s Shape) {
+	fmt.Printf("%s: площадь=%.2f, периметр=%.2f\n", name, s.Area(), s.Perimeter())
+}
 
 func main() {
 	// TODO: printShapeInfo("Круг", Circle{Radius: 5})
 	// TODO: printShapeInfo("Прямоугольник", Rectangle{Width: 4, Height: 6})
-
-	_ = fmt.Println
-	_ = math.Pi
+	printShapeInfo("Круг", Circle{Radius: 5})
+	printShapeInfo("Прямоугольник", Rectangle{Width: 4, Height: 6})
 }

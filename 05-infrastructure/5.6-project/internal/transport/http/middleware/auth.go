@@ -9,7 +9,7 @@ import (
 	"github.com/course/token-service/internal/transport/util/auth"
 )
 
-func AuthMiddleware(logger *slog.Logger) Middleware {
+func AuthMiddleware(logger *slog.Logger, ac helpers.AppConfig) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token, err := helpers.ExtractBearerToken(r.Header.Get("Authorization"))
@@ -19,7 +19,7 @@ func AuthMiddleware(logger *slog.Logger) Middleware {
 				return
 			}
 
-			userID, err := helpers.GetIdFromToken(token)
+			userID, err := helpers.GetIdFromToken(token, ac)
 			if err != nil {
 				logger.Error("failed to verify the token", "err", err)
 				util.WriteError(w, http.StatusUnauthorized, "failed to verify the token")

@@ -23,13 +23,14 @@ var RefreshExpTime = 30 * time.Minute
 var tracer = otel.Tracer("5.6-project/service/token-service")
 
 type TokenService struct {
-	pool    *pgxpool.Pool
-	queries *db.Queries
-	metrics *observability.AuthMetrics
+	pool      *pgxpool.Pool
+	queries   *db.Queries
+	appConfig helpers.AppConfig
+	metrics   *observability.AuthMetrics
 }
 
-func NewTokenService(pool *pgxpool.Pool, q *db.Queries, m *observability.AuthMetrics) *TokenService {
-	return &TokenService{pool: pool, queries: q, metrics: m}
+func NewTokenService(pool *pgxpool.Pool, q *db.Queries, ac helpers.AppConfig, m *observability.AuthMetrics) *TokenService {
+	return &TokenService{pool: pool, queries: q, appConfig: ac, metrics: m}
 }
 
 func (ts *TokenService) Register(ctx context.Context, email, password string) (userID int64, err error) {
@@ -43,11 +44,6 @@ func (ts *TokenService) Register(ctx context.Context, email, password string) (u
 			wrappedErr := fmt.Errorf("%s: %w", failureReason, err)
 			span.SetStatus(codes.Error, wrappedErr.Error())
 			span.RecordError(wrappedErr)
-
-			ts.metrics.TokensIssued.WithLabelValues("refresh", "fail", failureReason).Inc()
-		} else {
-			ts.metrics.TokensIssued.WithLabelValues("refresh", "success", "none").Inc()
-			ts.metrics.TokensIssued.WithLabelValues("access", "success", "none").Inc()
 		}
 	}()
 
@@ -151,7 +147,7 @@ func (ts *TokenService) Login(ctx context.Context, email, password string) (refr
 		return "", "", ErrUnauthorized
 	}
 
-	accessToken, err = helpers.GenToken(user.ID)
+	accessToken, err = helpers.GenToken(user.ID, ts.appConfig)
 	if err != nil {
 		ts.metrics.TokensIssued.WithLabelValues("access", "fail", "failed_to_gen").Inc()
 		return "", "", err
@@ -159,7 +155,7 @@ func (ts *TokenService) Login(ctx context.Context, email, password string) (refr
 
 	refreshToken, err = helpers.GenRefreshToken()
 	if err != nil {
-		failureReason = "user_not_found"
+		failureReason = "failed_to_gen"
 		return "", "", err
 	}
 
@@ -220,7 +216,7 @@ func (ts *TokenService) Refresh(ctx context.Context, oldRefresh string) (newRefr
 		return "", "", errors.New("failed to revoke the token")
 	}
 
-	accessToken, err = helpers.GenToken(active.UserID)
+	accessToken, err = helpers.GenToken(active.UserID, ts.appConfig)
 	if err != nil {
 		ts.metrics.TokensIssued.WithLabelValues("access", "fail", "failed_to_gen").Inc()
 		return "", "", err

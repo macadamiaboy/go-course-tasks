@@ -18,7 +18,7 @@ func LoggingUnaryInterceptor(logger *slog.Logger) grpc.UnaryServerInterceptor {
 		st, _ := status.FromError(err)
 		statusCode := st.Code().String()
 
-		logger.Info("http request",
+		logger.Info("grpc request",
 			"method", info.FullMethod,
 			"status", statusCode,
 			"duration", time.Since(start),

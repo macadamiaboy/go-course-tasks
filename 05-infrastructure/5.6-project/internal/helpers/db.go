@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -10,22 +9,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var dsn = struct {
-	username string
-	password string
-	host     string
-	port     int
-	dbName   string
-}{username: "postgres", password: "password", host: "localhost", port: 5432, dbName: "token_service_db"}
-
-func InitDB(baseCtx context.Context, logger *slog.Logger) (*pgxpool.Pool, error) {
-	url := fmt.Sprintf("postgres://%s:%s@%s:%v/%s?sslmode=disable",
-		dsn.username,
-		dsn.password,
-		dsn.host,
-		dsn.port,
-		dsn.dbName,
-	)
+func InitDB(baseCtx context.Context, logger *slog.Logger, DBConfig DBConfig) (*pgxpool.Pool, error) {
+	url := DBConfig.ConnString
 
 	ctx, cancel := context.WithTimeout(baseCtx, 5*time.Second)
 	defer cancel()

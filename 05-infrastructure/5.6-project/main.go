@@ -217,8 +217,10 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", healthHandler)
 
+	config := helpers.LoadConfig(logger)
+
 	// TODO: подключи DATABASE_URL и инициализируй pgxpool
-	pool, err := helpers.InitDB(ctx, logger)
+	pool, err := helpers.InitDB(ctx, logger, config.DB)
 	if err != nil {
 		logger.Error("pgx pool init failed", "error", err)
 		return
@@ -250,14 +252,14 @@ func main() {
 	authMetrics := observability.NewAuthMetrics()
 
 	queries := db.New(pool)
-	tokenService := service.NewTokenService(pool, queries, authMetrics)
+	tokenService := service.NewTokenService(pool, queries, config.App, authMetrics)
 	tokenHandler := handler.NewTokenHandler(tokenService, logger)
 
 	grpcTokenServiceServer := grpcServiceSrv.NewTokenServiceServer(tokenService, logger)
 
 	// TODO: добавь роуты /auth/register, /auth/login, /auth/refresh, /auth/logout, /auth/me
 	mux.Handle(
-		"POST /api/register",
+		"POST /auth/register",
 		Chain(
 			http.HandlerFunc(tokenHandler.Register),
 			middleware.LoggingMiddleware(logger),
@@ -265,7 +267,7 @@ func main() {
 		),
 	)
 	mux.Handle(
-		"POST /api/login",
+		"POST /auth/login",
 		Chain(
 			http.HandlerFunc(tokenHandler.Login),
 			middleware.LoggingMiddleware(logger),
@@ -273,30 +275,30 @@ func main() {
 		),
 	)
 	mux.Handle(
-		"POST /api/refresh",
+		"POST /auth/refresh",
 		Chain(
 			http.HandlerFunc(tokenHandler.Refresh),
 			middleware.LoggingMiddleware(logger),
 			middleware.MetricsMiddleware(httpMetrics),
-			middleware.AuthMiddleware(logger),
+			middleware.AuthMiddleware(logger, config.App),
 		),
 	)
 	mux.Handle(
-		"POST /api/logout",
+		"POST /auth/logout",
 		Chain(
 			http.HandlerFunc(tokenHandler.Logout),
 			middleware.LoggingMiddleware(logger),
 			middleware.MetricsMiddleware(httpMetrics),
-			middleware.AuthMiddleware(logger),
+			middleware.AuthMiddleware(logger, config.App),
 		),
 	)
 	mux.Handle(
-		"GET /api/me",
+		"GET /auth/me",
 		Chain(
 			http.HandlerFunc(tokenHandler.Validate),
 			middleware.LoggingMiddleware(logger),
 			middleware.MetricsMiddleware(httpMetrics),
-			middleware.AuthMiddleware(logger),
+			middleware.AuthMiddleware(logger, config.App),
 		),
 	)
 
@@ -315,7 +317,7 @@ func main() {
 		grpc.ChainUnaryInterceptor(
 			interceptor.LoggingUnaryInterceptor(logger),
 			interceptor.MetricsUnaryInterceptor(grpcMetrics.RequestsTotal, grpcMetrics.RequestsDuration),
-			interceptor.AuthUnaryInterceptor,
+			interceptor.AuthUnaryInterceptor(config.App),
 		),
 	}
 

@@ -244,5 +244,5 @@ func (th *TokenHandler) Validate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	th.logger.InfoContext(ctx, "validate req is successful")
-	util.WriteJSON(w, http.StatusCreated, userCredStruct{UserID: userID, Email: email})
+	util.WriteJSON(w, http.StatusOK, userCredStruct{UserID: userID, Email: email})
 }

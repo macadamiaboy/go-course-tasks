@@ -28,6 +28,18 @@ func (h *TraceHandler) Handle(ctx context.Context, r slog.Record) error {
 	return h.Handler.Handle(ctx, r)
 }
 
+func (h *TraceHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &TraceHandler{
+		Handler: h.Handler.WithAttrs(attrs),
+	}
+}
+
+func (h *TraceHandler) WithGroup(name string) slog.Handler {
+	return &TraceHandler{
+		Handler: h.Handler.WithGroup(name),
+	}
+}
+
 func NewLogger(service, env, version string) *slog.Logger {
 	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,

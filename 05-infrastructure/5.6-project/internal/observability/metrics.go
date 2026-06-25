@@ -45,7 +45,7 @@ func NewGRPCMetrics() *HTTPMetrics {
 		),
 		RequestsDuration: promauto.NewHistogramVec(
 			prometheus.HistogramOpts{
-				Name:    "grpcs_request_duration_seconds",
+				Name:    "grpc_request_duration_seconds",
 				Help:    "gRPC request latency in seconds.",
 				Buckets: prometheus.DefBuckets,
 			},

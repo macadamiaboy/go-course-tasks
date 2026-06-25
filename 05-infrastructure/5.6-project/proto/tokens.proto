@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package api_service_v1;
+
+import "google/protobuf/empty.proto";
+
+option go_package = "pkg/pb";
+
+// IssueToken
+message IssueTokenRequest {
+    string user_id = 1;
+}
+
+message IssueTokenResponse {
+    string token = 1;
+    string user_id = 2;
+}
+
+// ValidateToken
+message ValidateTokenRequest {
+    string token = 1;
+}
+
+message ValidateTokenResponse {
+    string user_id = 1;
+    bool is_valid = 2;
+}
+
+// RevokeToken
+message RevokeTokenRequest {
+    string token = 1;
+}
+
+message RevokeTokenResponse {
+    bool is_revoked = 1;
+}
+
+service TokenService {
+  rpc IssueToken(IssueTokenRequest) returns (IssueTokenResponse) {}
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse) {}
+  rpc RevokeToken(RevokeTokenRequest) returns (RevokeTokenResponse) {}
+}

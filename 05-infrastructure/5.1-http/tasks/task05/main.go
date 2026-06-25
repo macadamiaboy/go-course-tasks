@@ -41,23 +41,35 @@ func main() {
 
 	// TODO: запусти сервер в горутине через srv.ListenAndServe()
 	// При ошибке, отличной от http.ErrServerClosed, вызывай log.Fatal
+	go func() {
+		log.Printf("server started on %s\n", srv.Addr)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("listen: %v", err)
+		}
+	}()
 
 	// TODO: создай канал для перехвата сигналов:
 	//   quit := make(chan os.Signal, 1)
 	//   signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	// TODO: заблокируйся на чтении из quit
+	<-quit
 
 	// TODO: после получения сигнала:
 	//   1. Залогируй "shutting down..."
 	//   2. Создай контекст с таймаутом 10 секунд
 	//   3. Вызови srv.Shutdown(ctx)
 	//   4. Залогируй "server stopped"
+	log.Println("shutting down...")
 
-	_ = srv            // убери после реализации
-	_ = os.Signal(syscall.SIGINT)
-	_ = signal.Notify
-	_ = context.Background
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Printf("graceful shutdown failed: %v", err)
+	}
 
 	log.Println("server started on :8080")
 }

@@ -13,6 +13,7 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"time"
@@ -34,11 +35,20 @@ func main() {
 	//   IdleTimeout:       ... // время простоя keep-alive соединения
 	//
 	// Рекомендуемые значения для старта: 5s / 10s / 10s / 60s
+	srv := &http.Server{
+		Addr:              ":8080",
+		Handler:           mux,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
 
 	// TODO: запусти сервер через srv.ListenAndServe()
 	// и обработай ошибку
-
-	_ = time.Second // убери после реализации
-
+	err := srv.ListenAndServe()
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Fatalf("ошибка запуска сервера: %v", err)
+	}
 	log.Println("server started on :8080")
 }

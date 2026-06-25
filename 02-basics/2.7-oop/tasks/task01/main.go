@@ -32,16 +32,58 @@ import (
 )
 
 // TODO: var ErrEmptyStack = errors.New("stack is empty")
+var ErrEmptyStack = errors.New("stack is empty")
 
 // TODO: type Stack struct { items []int }
+type Stack struct {
+	items []int
+}
 
 // TODO: методы Push, Pop, Peek, Len, IsEmpty на *Stack
+func (s *Stack) Push(val int) {
+	s.items = append(s.items, val)
+}
+
+func (s *Stack) Pop() (int, error) {
+	length := len(s.items)
+	if length == 0 {
+		return 0, ErrEmptyStack
+	}
+
+	val := s.items[length-1]
+	s.items = s.items[:length-1]
+	return val, nil
+}
+
+func (s *Stack) Peek() (int, error) {
+	length := len(s.items)
+	if length == 0 {
+		return 0, ErrEmptyStack
+	}
+
+	val := s.items[length-1]
+	return val, nil
+}
+
+func (s *Stack) Len() int { return len(s.items) }
+
+func (s *Stack) Empty() bool { return len(s.items) == 0 }
 
 func main() {
 	// TODO: s := &Stack{}
 	// s.Push(10); s.Push(20); s.Push(30)
 	// ...
+	s := &Stack{}
 
-	_ = errors.New
-	_ = fmt.Println
+	s.Push(10)
+	s.Push(20)
+	s.Push(30)
+
+	fmt.Println(s.Len())
+	fmt.Println(s.Peek())
+	fmt.Println(s.Pop())
+	fmt.Println(s.Pop())
+	fmt.Println(s.Pop())
+	fmt.Println(s.Empty())
+	fmt.Println(s.Pop())
 }

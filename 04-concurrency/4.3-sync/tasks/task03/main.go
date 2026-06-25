@@ -32,14 +32,57 @@ import (
 )
 
 // TODO: реализуй MutexCounter (sync.Mutex)
+type MutexCounter struct {
+	mu    sync.Mutex
+	value int
+}
+
+func (c *MutexCounter) Increment() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.value++
+}
+
+func (c *MutexCounter) Value() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.value
+}
 
 // TODO: реализуй AtomicCounter (atomic.Int64)
+type AtomicCounter struct {
+	value atomic.Int64
+}
+
+func (c *AtomicCounter) Increment() {
+	c.value.Add(1)
+}
+
+func (c *AtomicCounter) Value() int64 { return c.value.Load() }
 
 func main() {
 	// TODO: запусти 1000 горутин для каждого счётчика,
 	// дождись завершения через WaitGroup и напечатай значения.
+	mutexCounter := MutexCounter{value: 0}
+	var atomicCounter AtomicCounter
 
-	_ = fmt.Println
-	_ = sync.WaitGroup{}
-	_ = atomic.Int64{}
+	var wg sync.WaitGroup
+
+	for range 1000 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			mutexCounter.Increment()
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			atomicCounter.Increment()
+		}()
+	}
+
+	wg.Wait()
+	fmt.Println("MC:", mutexCounter.Value())
+	fmt.Println("AC:", atomicCounter.Value())
 }

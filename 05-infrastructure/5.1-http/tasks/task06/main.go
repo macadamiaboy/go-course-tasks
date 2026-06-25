@@ -28,6 +28,10 @@ import (
 	"time"
 )
 
+type apiError struct {
+	Error string `json:"error"`
+}
+
 // writeJSON отправляет JSON-ответ с заданным статусом.
 func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
@@ -37,9 +41,16 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 
 // TODO: реализуй writeError(w http.ResponseWriter, status int, msg string)
 // должна вызывать writeJSON с телом {"error":"<msg>"}
+func writeError(w http.ResponseWriter, status int, msg string) {
+	writeJSON(w, status, apiError{msg})
+}
 
 func handleHealth(w http.ResponseWriter, r *http.Request) {
 	// TODO: верни {"status":"ok"} со статусом 200
+	statusResponse := struct {
+		Status string `json:"status"`
+	}{"ok"}
+	writeJSON(w, http.StatusOK, statusResponse)
 }
 
 func handleCreateToken(w http.ResponseWriter, r *http.Request) {
@@ -47,12 +58,39 @@ func handleCreateToken(w http.ResponseWriter, r *http.Request) {
 	// При ошибке декодирования — 400, {"error":"invalid json"}
 	// Если user_id пустой — 400, {"error":"user_id is required"}
 	// Иначе — 201, {"token_id":"tok-<timestamp>","user_id":"<user_id>"}
-	_ = fmt.Sprintf("tok-%d", time.Now().UnixNano()) // убери после реализации
+	var requestBody struct {
+		UserID string `json:"user_id"`
+	}
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&requestBody); err != nil {
+		writeJSON(w, http.StatusBadRequest, apiError{Error: "invalid json"})
+		return
+	}
+
+	if requestBody.UserID == "" {
+		writeJSON(w, http.StatusBadRequest, apiError{Error: "user_id is required"})
+		return
+	}
+
+	response := struct {
+		TokenID string `json:"token_id"`
+		UserID  string `json:"user_id"`
+	}{TokenID: fmt.Sprintf("tok-%d", time.Now().UnixNano()), UserID: requestBody.UserID}
+	writeJSON(w, http.StatusCreated, response)
 }
 
 func handleGetToken(w http.ResponseWriter, r *http.Request) {
 	// TODO: достань id через r.PathValue("id")
 	// Верни мок: {"token_id":"<id>","user_id":"mock-user","expires_in":3600}
+	id := r.PathValue("id")
+
+	response := struct {
+		TokenID   string `json:"token_id"`
+		UserID    string `json:"user_id"`
+		ExpiresAt int    `json:"expires_at"`
+	}{TokenID: id, UserID: "mock-user", ExpiresAt: 3600}
+	writeJSON(w, http.StatusCreated, response)
+
 }
 
 func main() {
@@ -62,6 +100,9 @@ func main() {
 	// mux.HandleFunc("GET /health", handleHealth)
 	// mux.HandleFunc("POST /api/v1/tokens", handleCreateToken)
 	// mux.HandleFunc("GET /api/v1/tokens/{id}", handleGetToken)
+	mux.HandleFunc("GET /health", handleHealth)
+	mux.HandleFunc("POST /api/v1/tokens", handleCreateToken)
+	mux.HandleFunc("GET /api/v1/tokens/{id}", handleGetToken)
 
 	srv := &http.Server{
 		Addr:              ":8080",
@@ -73,6 +114,12 @@ func main() {
 	}
 
 	// TODO: запусти srv в горутине (аналогично task05)
+	go func() {
+		log.Printf("server started on %s\n", srv.Addr)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("listen: %v", err)
+		}
+	}()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)

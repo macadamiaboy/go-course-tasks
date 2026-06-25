@@ -62,11 +62,26 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
+
+	"github.com/course/token-service/internal/app"
+	"github.com/course/token-service/internal/db"
+	"github.com/course/token-service/internal/helpers"
+	"github.com/course/token-service/internal/observability"
+	"github.com/course/token-service/internal/service"
+	grpcServiceSrv "github.com/course/token-service/internal/transport/grpc"
+	"github.com/course/token-service/internal/transport/grpc/interceptor"
+	"github.com/course/token-service/internal/transport/http/handler"
+	"github.com/course/token-service/internal/transport/http/middleware"
+	"github.com/course/token-service/pkg/pb"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"google.golang.org/grpc"
 )
 
 // =============================================================================
@@ -187,37 +202,158 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
+func Chain(h http.Handler, middlewares ...middleware.Middleware) http.Handler {
+	for i := len(middlewares) - 1; i >= 0; i-- {
+		h = middlewares[i](h)
+	}
+	return h
+}
+
 func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil)).With(
-		"service", "token-service",
-		"env", "development",
-		"version", "0.1.0",
-	)
+	logger := observability.NewLogger("token-service", "development", "0.1.0")
 
 	ctx := context.Background()
-	_ = ctx
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", healthHandler)
 
+	config := helpers.LoadConfig(logger)
+
 	// TODO: подключи DATABASE_URL и инициализируй pgxpool
+	pool, err := helpers.InitDB(ctx, logger, config.DB)
+	if err != nil {
+		logger.Error("pgx pool init failed", "error", err)
+		return
+	}
+	defer pool.Close()
+
 	// TODO: инициализируй OTel TracerProvider
+	tp, err := observability.InitTracer()
+	if err != nil {
+		logger.Error("tracer provider init failed", "error", err)
+		return
+	}
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		if err := tp.Shutdown(shutdownCtx); err != nil {
+			logger.Error("tracer stoppage failed", "error", err)
+		}
+	}()
+
+	notifyCtx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	errCh := make(chan error, 2)
+
 	// TODO: зарегистрируй Prometheus-метрики
+	httpMetrics := observability.NewHTTPMetrics()
+	grpcMetrics := observability.NewGRPCMetrics()
+	authMetrics := observability.NewAuthMetrics()
+
+	queries := db.New(pool)
+	tokenService := service.NewTokenService(pool, queries, config.App, authMetrics)
+	tokenHandler := handler.NewTokenHandler(tokenService, logger)
+
+	grpcTokenServiceServer := grpcServiceSrv.NewTokenServiceServer(tokenService, logger)
+
 	// TODO: добавь роуты /auth/register, /auth/login, /auth/refresh, /auth/logout, /auth/me
+	mux.Handle(
+		"POST /auth/register",
+		Chain(
+			http.HandlerFunc(tokenHandler.Register),
+			middleware.LoggingMiddleware(logger),
+			middleware.MetricsMiddleware(httpMetrics),
+		),
+	)
+	mux.Handle(
+		"POST /auth/login",
+		Chain(
+			http.HandlerFunc(tokenHandler.Login),
+			middleware.LoggingMiddleware(logger),
+			middleware.MetricsMiddleware(httpMetrics),
+		),
+	)
+	mux.Handle(
+		"POST /auth/refresh",
+		Chain(
+			http.HandlerFunc(tokenHandler.Refresh),
+			middleware.LoggingMiddleware(logger),
+			middleware.MetricsMiddleware(httpMetrics),
+			middleware.AuthMiddleware(logger, config.App),
+		),
+	)
+	mux.Handle(
+		"POST /auth/logout",
+		Chain(
+			http.HandlerFunc(tokenHandler.Logout),
+			middleware.LoggingMiddleware(logger),
+			middleware.MetricsMiddleware(httpMetrics),
+			middleware.AuthMiddleware(logger, config.App),
+		),
+	)
+	mux.Handle(
+		"GET /auth/me",
+		Chain(
+			http.HandlerFunc(tokenHandler.Validate),
+			middleware.LoggingMiddleware(logger),
+			middleware.MetricsMiddleware(httpMetrics),
+			middleware.AuthMiddleware(logger, config.App),
+		),
+	)
+
 	// TODO: добавь GET /metrics для Prometheus
+	mux.Handle("/metrics", promhttp.Handler())
 
-	srv := &http.Server{
-		Addr:              ":8080",
-		Handler:           mux,
-		ReadHeaderTimeout: 5 * time.Second,
-		WriteTimeout:      10 * time.Second,
-		IdleTimeout:       60 * time.Second,
+	filter := otelhttp.WithFilter(func(r *http.Request) bool {
+		return r.URL.Path != "/health" && r.URL.Path != "/metrics"
+	})
+	wrappedMux := otelhttp.NewHandler(mux, "token-api", filter)
+
+	httpSrv := app.StartHttpServer(logger, ":8080", wrappedMux, errCh)
+
+	grpcOpts := []grpc.ServerOption{
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
+		grpc.ChainUnaryInterceptor(
+			interceptor.LoggingUnaryInterceptor(logger),
+			interceptor.MetricsUnaryInterceptor(grpcMetrics.RequestsTotal, grpcMetrics.RequestsDuration),
+			interceptor.AuthUnaryInterceptor(config.App),
+		),
 	}
 
-	logger.Info("server started", "addr", ":8080")
-	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		logger.Error("server failed", "error", err)
-		os.Exit(1)
+	registerFunc := func(registrar grpc.ServiceRegistrar) {
+		pb.RegisterTokenServiceServer(registrar, grpcTokenServiceServer)
 	}
-	fmt.Println("TODO: implement Token Service — see stage comments above")
+
+	grpcServer, grpcLis, err := app.StartGRPCServer(logger, ":50051", errCh, grpcOpts, registerFunc)
+	if err != nil {
+		logger.Error("failed to shutdown servers", "error", err)
+		return
+	}
+
+	defer grpcLis.Close()
+
+	select {
+	case <-notifyCtx.Done():
+		logger.Info("received a shutdown signal")
+	case err := <-errCh:
+		logger.Error("critical server error. Shutting down", "error", err)
+	}
+
+	select {
+	case err := <-errCh:
+		logger.Error("critical server error. Shutting down", "error", err)
+	default:
+	}
+
+	shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	if err := httpSrv.Shutdown(shutdownCtx); err != nil {
+		logger.Error("failed to shutdown servers", "error", err)
+	}
+
+	grpcServer.GracefulStop()
+	logger.Info("both servers had successfully been shut down")
+
 }
